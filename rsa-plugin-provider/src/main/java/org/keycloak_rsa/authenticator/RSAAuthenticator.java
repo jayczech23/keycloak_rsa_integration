@@ -45,7 +45,7 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
         _sharedUsername = _config.getSharedUsername();
 
 	_log.debug(_logTag + "Current Username: " + _currentUserName);
-	_log.debug(_logTag + "Shared Username: " + _sharedUserName);
+	_log.debug(_logTag + "Shared Username: " + _sharedUsername);
 
         int tokenCounter = 0;
         // Collect the messages for the tokens to display
@@ -141,7 +141,9 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
         JsonObject params = buildPayload(otp);
         JsonObject body = _endpoint.sendRequest(verifyEndpoint, params, POST);
 
+	_log.debug("Response received from `sendRequest`: " + body);
 	_log.debug("Verification Endpoint: " + verifyEndpoint);
+
         try {
             String result = body.getString(RSA_ATTEMPT_RESPONSE);
 
@@ -179,6 +181,7 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
                       ).build();
 
 
+	_log.debug("Payload to send to RSA: \n" + body);
         return body;
     }
 

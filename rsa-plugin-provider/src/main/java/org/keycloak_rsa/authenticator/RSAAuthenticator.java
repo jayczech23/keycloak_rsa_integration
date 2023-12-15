@@ -9,11 +9,12 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
+
 import java.util.*;
 
 import static org.rsa.authenticator.Const.*;
@@ -27,6 +28,7 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
     private Boolean _sharedUsername;
     private Configuration _config;
     private Endpoint _endpoint;
+    private String _logTag = "ENIGMA-KC";
 
 
     @Override
@@ -42,9 +44,14 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
         _currentUserName = user.getUsername();
         _sharedUsername = _config.getSharedUsername();
 
+	_log.debug(_logTag + "Current Username: " + _currentUserName);
+	_log.debug(_logTag + "Shared Username: " + _sharedUsername);
+
         int tokenCounter = 0;
         // Collect the messages for the tokens to display
         List<String> otpMessages = new ArrayList<>();
+
+	_log.debug("Creating Login Form");
     
         // Create login form
         Response challenge = context.form()
@@ -68,6 +75,8 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
             return;
         }
 
+	_log.debug("Getting data from form");
+
         // Get data from form
         String otpMessage = formData.getFirst(FORM_OTP_MESSAGE);
         String otp = formData.getFirst(FORM_RSA_OTP);
@@ -78,6 +87,7 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
         }
 
         if(otp == null || otp.isEmpty()) {
+	    _log.debug(_logTag + "OTP is empty");
             JsonObject error =  Json.createObjectBuilder()
                       .add("error", "missing_parameter")
                       .add("error_description", "Missing parameter: rsa_token")
@@ -91,6 +101,7 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
         }
 
         if(_currentUserName == null || _currentUserName.isEmpty()) {
+	    _log.debug("Current username is empty");
             JsonObject error =  Json.createObjectBuilder()
                       .add("error", "missing_parameter")
                       .add("error_description", "Missing parameter: username")
@@ -124,10 +135,15 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
      * @return true if authentication was successful, else false
      */
     private boolean validateResponse(AuthenticationFlowContext context, String otp) {
+	_log.debug("Validating Response");
 
         String verifyEndpoint = _config.getVerifyEndpoint();
         JsonObject params = buildPayload(otp);
         JsonObject body = _endpoint.sendRequest(verifyEndpoint, params, POST);
+
+	_log.debug("Response received from `sendRequest`: " + body);
+	_log.debug("Verification Endpoint: " + verifyEndpoint);
+
         try {
             String result = body.getString(RSA_ATTEMPT_RESPONSE);
 
@@ -141,6 +157,8 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
     }
 
     private JsonObject buildPayload(String otp) {
+
+	    _log.debug("Building payload to send to RSA with otp: " + otp);
 
 	    JsonObject body = Json.createObjectBuilder()
                       .add(KEY_CLIENT_ID, _config.getClientId())
@@ -163,6 +181,7 @@ public class RSAAuthenticator implements org.keycloak.authentication.Authenticat
                       ).build();
 
 
+	_log.debug("Payload to send to RSA: \n" + body);
         return body;
     }
 
